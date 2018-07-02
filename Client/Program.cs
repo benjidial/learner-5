@@ -122,6 +122,9 @@ namespace Benji.Learner.Client {
                         "     \"use\"          or \"u\" to use a network,\n" +
                         "     \"memory usage\" or \"s\" to check the memory usage,\n" +
                         "     \"generation\"   or \"g\" to check the current generation,\n" +
+                        "     \"restart\"      or \"R\" to start over,\n" +
+                        "     \"load nets\"    or \"L\" to load saved networks,\n" +
+                        "     \"save nets\"    or \"S\" to save networks,\n" +
                         "     \"help\"         or \"h\" for this message,\n" +
                         "     \"exit\"         or \"e\" to exit\n" +
                         "  or \"clear\"        or \"c\" to clear the screen.";
@@ -164,10 +167,10 @@ namespace Benji.Learner.Client {
           string[][] outputs;
           MakeSets(out inputs, out outputs);
           Console.Write("Training info file: ");
-          using (BinaryWriter bw = new BinaryWriter(File.Open(Console.ReadLine(), FileMode.Create))) {
-            Console.Write("Saving...");
+          string filename = Console.ReadLine();
+          Console.Write("Saving...");
+          using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create)))
             MakeTrainingFile(bw, inputs, outputs);
-          }
           Console.WriteLine();
         } else if (input == "load trainer" || input == "l") {
           Console.Write("Training info file: ");
@@ -206,7 +209,47 @@ namespace Benji.Learner.Client {
         else if (input == "memory usage" || input == "s")
           Console.WriteLine("{0:N0}B", GC.GetTotalMemory(false));
         else if (input == "generation" || input == "g")
-          Console.WriteLine(generations);
+          if (generations < 0)
+            Console.WriteLine(generations - int.MinValue + " since load");
+          else
+            Console.WriteLine(generations);
+        else if (input == "restart" || input == "R") {
+          generations = 0;
+          do
+            Console.Write("Population size: ");
+          while (!int.TryParse(Console.ReadLine(), out size));
+          population = new Population(size, functions);
+        } else if (input == "load nets" || input == "L") {
+          Console.Write("Networks file: ");
+          string filename = Console.ReadLine();
+          Console.Write("Loading...");
+          using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open))) {
+            ushort version;
+            switch (version = br.ReadUInt16()) {
+            case 0x0000:
+              generations = int.MinValue;
+              population = new Population(br);
+              break;
+            case 0x8000:
+              generations = br.ReadInt32();
+              population = new Population(br);
+              break;
+            default:
+              throw new PlatformNotSupportedException(string.Format("Learner 5 Client 1.2 cannot load files with a version other than 0x0000 or 0x8000.  This file's version was 0x{0:X2}.", version));
+            }
+          }
+          Console.WriteLine();
+        } else if (input == "save nets" || input == "S") {
+          Console.Write("Networks file: ");
+          string filename = Console.ReadLine();
+          Console.Write("Saving...");
+          using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create))) {
+            bw.Write((ushort)0x8000);
+            bw.Write(generations);
+            population.Save(bw);
+          }
+          Console.WriteLine();
+        }
       }
     }
   }
