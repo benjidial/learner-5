@@ -202,7 +202,7 @@ namespace Benji.Learner {
     /// <param name="inputs">A list of inputs.</param>
     /// <param name="outputs">A list of allowable outputs for each input.</param>
     /// <param name="functions">When a new function is needed at a step in the network, it is picked from this list.</param>
-    /// <param name="maxTries">If a working network can't be made in this many tries, add a non-working one in its place.</param> 
+    /// <param name="maxTries">If working networks can't be made in this many tries, add a non-working one in their place.</param> 
     public void TrainGeneration(string[] inputs, string[][] outputs, Function[] functions, int maxTries) {
       if (inputs.Length != outputs.Length)
         throw new ArgumentException("'inputs' and 'outputs' must be the same length.");
@@ -228,8 +228,10 @@ namespace Benji.Learner {
             try {
               output = inner.Run(inputs[qa_set]);
             } catch (Exception) {
-              if (++tries >= maxTries)
+              if (++tries >= maxTries) {
                 inners.Add((Inner)inner.Clone());
+                return;
+              }
               continue;
             }
             foreach (string chance in outputs[qa_set])
@@ -237,8 +239,10 @@ namespace Benji.Learner {
                 inners.Add((Inner)inner.Clone());
                 break;
               }
-            if (++tries >= maxTries)
+            if (++tries >= maxTries) {
               inners.Add((Inner)inner.Clone());
+              return;
+            }
           }
         }));
       Inner dummy;
