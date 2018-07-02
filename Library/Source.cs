@@ -140,23 +140,31 @@ namespace Benji.Learner {
       /// Saves a representation of this <see cref="Benji.Learner.Population.Inner"/> that can later be loaded.
       /// </summary>
       /// <param name="bw">The stream to save to.</param>
-      public void Save(System.IO.BinaryWriter bw) {
-        throw new System.NotImplementedException();//TODO: save function
+      public void Save(System.IO.BinaryWriter bw, Function[] functions) {
+        if (functions == null)
+          throw new ArgumentNullException("'functions' must not be null.");
+        for (int i = 0; i < functions.Length; i++)
+          if (functions[i] == function) {
+            bw.Write(i);
+            goto cont;
+          }
+        throw new ArgumentException(string.Format("A function {0} is not in the provided list.", function));
+      cont:
         bw.Write(feeds.Count);
         foreach (Inner feed in feeds)
-          feed.Save(bw);
+          feed.Save(bw, functions);
       }
       /// <summary>
       /// Loads from a file in the format saved by <see cref="Benji.Learner.Population.Inner.Save"/>.
       /// </summary>
       /// <param name="br">The stream to load from.</param>
-      public Inner(System.IO.BinaryReader br) {
-        throw new System.NotImplementedException();//TODO: load function
+      public Inner(System.IO.BinaryReader br, Function[] functions) {
+        function = functions[br.ReadInt32()];
         tree_size = 1;
         int n_feeds = br.ReadInt32();
         feeds = new List<Inner>(n_feeds);
         for (int i = 0; i < n_feeds; i++) {
-          Inner feed = new Inner(br);
+          Inner feed = new Inner(br, functions);
           tree_size += feed.tree_size;
           feeds.Add(feed);
         }
@@ -333,7 +341,7 @@ namespace Benji.Learner {
     /// Saves a representation of this <see cref="Benji.Learner.Population"/> that can later be loaded.
     /// </summary>
     /// <param name="bw">The stream to save to.</param>
-    public void Save(System.IO.BinaryWriter bw, ushort version = 0) {
+    public void Save(System.IO.BinaryWriter bw, Function[] functions = null, ushort version = 0) {
       if (version > 0x7fff)
         throw new ArgumentOutOfRangeException("Version numbers above 0x7fff are reserved for wrappers.");
       if (version != 0)
@@ -341,20 +349,20 @@ namespace Benji.Learner {
       bw.Write((ushort)0);
       bw.Write(size);
       foreach (Inner inner in inners)
-        inner.Save(bw);
+        inner.Save(bw, functions);
     }
     /// <summary>
     /// Loads from a file in the format saved by <see cref="Benji.Learner.Population.Save"/>.
     /// </summary>
     /// <param name="br">The stream to load from.</param>
-    public Population(System.IO.BinaryReader br) {
+    public Population(System.IO.BinaryReader br, Function[] functions) {
       ushort version;
       if ((version = br.ReadUInt16()) != 0)
         throw new NotSupportedException(string.Format("Learner 5.1 cannot load files with a version above 0x0000.  This file's version is 0x{0:X2}.", version));
       size = br.ReadInt32();
       inners = new ConcurrentBag<Inner>();
       for (int i = 0; i < size; i++)
-        inners.Add(new Inner(br));
+        inners.Add(new Inner(br, functions));
     }
   }
 }

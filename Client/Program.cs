@@ -59,7 +59,30 @@ namespace Benji.Learner.Client {
       (s, input) => (F(s) + F(input)).ToString(),
       (s, input) => (F(s) - F(input)).ToString(),
       (s, input) => (F(s) * F(input)).ToString(),
-      (s, input) => (F(s) / F(input)).ToString()
+      (s, input) => (F(s) / F(input)).ToString(),
+      (s, input) => input.Length.ToString(),
+      (s, input) => s.Length.ToString(),
+      (s, input) => C(s).Length.ToString(),
+      (s, input) => {
+        System.Text.StringBuilder sb = new System.Text.StringBuilder(input.Length);
+        if (s.Length == 0)
+          foreach (char c in input)
+            sb.Append((char)(c - 1));
+        else
+          foreach (char c in input)
+            sb.Append((char)(c + 1));
+        return sb.ToString();
+      },
+      (s, input) => new string(input[0], s.Length),
+      (s, input) => new string('\0', input.Length),
+      (s, input) => new string('\x7f', input.Length),
+      (s, input) => new string(input[s.Length], 1),
+      (s, input) => {
+        int i;
+        if (int.TryParse(C(s), out i))
+          return new string(input[i], 1);
+        return input;
+      }
     };
     static void LoadTrainingFile(BinaryReader file, out string[] inputs, out string[][] outputs) {
       int sets = file.ReadInt32();
@@ -225,18 +248,10 @@ namespace Benji.Learner.Client {
           Console.Write("Loading...");
           using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open))) {
             ushort version;
-            switch (version = br.ReadUInt16()) {
-            case 0x0000:
-              generations = int.MinValue;
-              population = new Population(br);
-              break;
-            case 0x8000:
-              generations = br.ReadInt32();
-              population = new Population(br);
-              break;
-            default:
-              throw new PlatformNotSupportedException(string.Format("Learner 5 Client 1.2 cannot load files with a version other than 0x0000 or 0x8000.  This file's version was 0x{0:X2}.", version));
-            }
+            if ((version = br.ReadUInt16()) != 0x8000)
+              throw new NotSupportedException(string.Format("Learner 5 Client 1.2 cannot load files with a version other than 0x8000.  This file's version was 0x{0:X2}.", version));
+            generations = br.ReadInt32();
+            population = new Population(br, functions);
           }
           Console.WriteLine();
         } else if (input == "save nets" || input == "S") {
@@ -246,7 +261,7 @@ namespace Benji.Learner.Client {
           using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create))) {
             bw.Write((ushort)0x8000);
             bw.Write(generations);
-            population.Save(bw);
+            population.Save(bw, functions);
           }
           Console.WriteLine();
         }
