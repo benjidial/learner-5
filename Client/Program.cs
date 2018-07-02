@@ -154,7 +154,7 @@ namespace Benji.Learner.Client {
     const string help_sets = "Type \"new set\"    or \"n\" to make a new set of inputs and outputs,\n" +
                              "     \"add output\" or \"a\" to add another output to this set,\n" +
                              "     \"help\"       or \"h\" for this message,\n" +
-                             "     \"done\"       or \"d\" to train with this set\n" +
+                             "     \"done\"       or \"d\" to use these sets\n" +
                              "  or \"clear\"      or \"c\" to clear the screen.";
     public static void Main() {
       int size;
@@ -177,7 +177,7 @@ namespace Benji.Learner.Client {
           while (!int.TryParse(Console.ReadLine(), out times));
           int tries;
           do
-            Console.Write("Number of tries per generation: ");
+            Console.Write("Number of tries per network per generation: ");
           while (!int.TryParse(Console.ReadLine(), out tries));
           for (int i = 0; i < times;) {
             Console.Write("{0} / {1}...", ++i, times);
@@ -210,7 +210,7 @@ namespace Benji.Learner.Client {
           while (!int.TryParse(Console.ReadLine(), out times));
           int tries;
           do
-            Console.Write("Number of tries per generation: ");
+            Console.Write("Number of tries per network per generation: ");
           while (!int.TryParse(Console.ReadLine(), out tries));
           for (int i = 0; i < times;) {
             Console.Write("{0} / {0}...", ++i, times);
