@@ -140,6 +140,7 @@ namespace Benji.Learner {
       /// Saves a representation of this <see cref="Benji.Learner.Population.Inner"/> that can later be loaded.
       /// </summary>
       /// <param name="bw">The stream to save to.</param>
+      /// <param name="functions">A list of the functions used in the network.  The same list must be given in the same order for loading.</param>
       public void Save(System.IO.BinaryWriter bw, Function[] functions) {
         if (functions == null)
           throw new ArgumentNullException("'functions' must not be null.");
@@ -158,6 +159,7 @@ namespace Benji.Learner {
       /// Loads from a file in the format saved by <see cref="Benji.Learner.Population.Inner.Save"/>.
       /// </summary>
       /// <param name="br">The stream to load from.</param>
+      /// <param name="functions">A list of the functions used in the network.  The same list should have been given in the same order when saving.</param>
       public Inner(System.IO.BinaryReader br, Function[] functions) {
         function = functions[br.ReadInt32()];
         tree_size = 1;
@@ -345,6 +347,8 @@ namespace Benji.Learner {
     /// Saves a representation of this <see cref="Benji.Learner.Population"/> that can later be loaded.
     /// </summary>
     /// <param name="bw">The stream to save to.</param>
+    /// <param name="functions">A list of the functions used in the network.  The same list should be given in the same order when loading.</param>
+    /// <param name="version">The id of the version to use</param>
     public void Save(System.IO.BinaryWriter bw, Function[] functions = null, ushort version = 0) {
       if (version > 0x7fff)
         throw new ArgumentOutOfRangeException("Version numbers above 0x7fff are reserved for wrappers.");
@@ -359,6 +363,7 @@ namespace Benji.Learner {
     /// Loads from a file in the format saved by <see cref="Benji.Learner.Population.Save"/>.
     /// </summary>
     /// <param name="br">The stream to load from.</param>
+    /// <param name="functions">A list of the functions used in the network.  The same list should have been given in the same order when saving.</param>
     public Population(System.IO.BinaryReader br, Function[] functions) {
       ushort version;
       if ((version = br.ReadUInt16()) != 0)
