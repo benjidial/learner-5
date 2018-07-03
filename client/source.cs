@@ -22,6 +22,7 @@ namespace Benji.Learner.Client {
       double ret;
       return double.TryParse(i, out ret) ? ret : (random.Next(2) == 1) ? Math.Log(random.NextDouble()) : -Math.Log(random.NextDouble());
     }
+    static Queue<string> q = new Queue<string>();
     static Func<string[], string, string>[] functions = new Func<string[], string, string>[] {
       (s, input) => E(s) ? input : string.Concat(s),
       (s, input) => string.Format(input, s),
@@ -80,9 +81,20 @@ namespace Benji.Learner.Client {
       (s, input) => new string(input[s.Length], 1),
       (s, input) => {
         int i;
-        if (int.TryParse(C(s), out i))
-          return new string(input[i], 1);
+        if (int.TryParse(input, out i))
+          return s[i];
         return input;
+      },
+      (s, input) => F(s).ToString(s.Length.ToString()),
+      (s, input) => {
+        q.Enqueue(input);
+        return s[q.Count];
+      },
+      (s, input) => {
+        string r;
+        if (q.TryDequeue(out r))
+          return r;
+        return C(s);
       }
     };
     static void LoadTrainingFile(BinaryReader file, out string[] inputs, out string[][] outputs) {
@@ -259,8 +271,15 @@ SOFTWARE.";
           } else if (input == "use" || input == "u") {
             Console.Write("Text to process: ");
             string text = Console.ReadLine();
-            foreach (string output in population.Use(text, Population.ErrorBehavior.use_message_as_output))
-              Console.WriteLine(output);
+            try {
+              foreach (string output in population.Use(text, Population.ErrorBehavior.throw_after_all))
+                Console.WriteLine("R: " + output);
+            } catch (AggregateException ex) {
+              if (ex.InnerExceptions.Count == 1)
+                Console.WriteLine("There was 1 error.");
+              else
+                Console.WriteLine("There were {0} errors.", ex.InnerExceptions.Count);
+            }
           } else if (input == "help" || input == "h")
             Console.WriteLine(help);
           else if (input == "exit" || input == "e")
