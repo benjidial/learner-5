@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text;
 using Rollbar;
 namespace Benji.Learner.Client {
   class Program {
@@ -66,7 +67,7 @@ namespace Benji.Learner.Client {
       (s, input) => s.Length.ToString(),
       (s, input) => C(s).Length.ToString(),
       (s, input) => {
-        System.Text.StringBuilder sb = new System.Text.StringBuilder(input.Length);
+        StringBuilder sb = new StringBuilder(input.Length);
         if (s.Length == 0)
           foreach (char c in input)
             sb.Append((char)(c - 1));
@@ -95,6 +96,58 @@ namespace Benji.Learner.Client {
         if (q.TryDequeue(out r))
           return r;
         return C(s);
+      },
+      (s, input) => {
+        int index = (int)(1 + 1 / F(s)) % input.Length;
+        return input.Substring(index) + input.Remove(index);
+      },
+      (s, input) => {
+        char[] tmp = input.ToCharArray();
+        Array.Reverse(tmp);
+        return new string(tmp);
+      },
+      (s, input) => {
+        StringBuilder sb = new StringBuilder();
+        foreach (string e in s)
+          sb.Append(e[0]);
+        return sb.ToString();
+      },
+      (s, input) => {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+          sb.Append(C(s)[i]);
+        return sb.ToString();
+      },
+      (s, input) => new string((char)random.Next(0x10000), input.Length),
+      (s, input) => {
+        int i;
+        if (!int.TryParse(C(s), out i))
+          i = s.Length;
+        return input.Remove(i) + C(s)[i] + input.Substring(i + 1);
+      },
+      (s, input) => {
+        int i;
+        if (!int.TryParse(C(s), out i))
+          i = s.Length;
+        return input.Remove(i) + (char)random.Next(0x10000) + input.Substring(i + 1);
+      },
+      (s, input) => {
+        int i;
+        if (!int.TryParse(C(s), out i))
+          i = s.Length;
+        return input.Remove(i) + C(s)[i] + input.Substring(i);
+      },
+      (s, input) => {
+        int i;
+        if (!int.TryParse(C(s), out i))
+          i = s.Length;
+        return input.Remove(i) + (char)random.Next(0x10000) + input.Substring(i);
+      },
+      (s, input) => {
+        int i;
+        if (!int.TryParse(C(s), out i))
+          i = s.Length;
+        return input.Remove(i) + input.Substring(i + 1);
       }
     };
     static void LoadTrainingFile(BinaryReader file, out string[] inputs, out string[][] outputs) {
