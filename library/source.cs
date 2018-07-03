@@ -79,7 +79,7 @@ namespace Benji.Learner {
           arguments[i] = feeds[i].Run(input);
         return function(arguments, input);
       }
-      private const double done = 0.2, restart = 0.002, expand = 0.05;
+      private const double done = 0.2, restart = 0.000005, expand = 0.05;
       /// <summary>
       /// Mutate the network below this point using the specified functions when a new function is needed.
       /// </summary>
@@ -182,8 +182,7 @@ namespace Benji.Learner {
     public Population(int size, Function[] functions) {
       if (size < 1)
         throw new ArgumentOutOfRangeException("'size' must be positive.");
-      this.size = size;
-      inners = new ConcurrentBag<Inner>();
+      inners = new List<Inner>(this.size = size);
       for (int i = 0; i < size; i++) {
         Inner inner = Inner.MakeBottom();
         inner.Mutate(functions);
@@ -191,9 +190,13 @@ namespace Benji.Learner {
       }
     }
     /// <summary>
+    /// A lock for accessing <see cref="Benji.Learner.Population.inners"/> from the multi-threaded part of <see cref="Benji.Learner.Population.TrainGeneration(string[], string[][], Function[], int)"/>
+    /// </summary>
+    protected object inners_lock;
+    /// <summary>
     /// The networks.
     /// </summary>
-    protected ConcurrentBag<Inner> inners;
+    protected List<Inner> inners;
     /// <summary>
     /// The number of networks in the population at each generation.
     /// </summary>
@@ -210,6 +213,7 @@ namespace Benji.Learner {
         throw new ArgumentException("'inputs' and 'outputs' must be the same length.");
       Thread[] threads = new Thread[inners.Count];
       Inner[] tmp = inners.ToArray();
+      inners.Clear();
       for (int i = 0; i < size; i++)
         threads[i] = new Thread((ParameterizedThreadStart)((index) => {
           Inner inner = tmp[(int)index];
@@ -219,7 +223,11 @@ namespace Benji.Learner {
             output = inner.Run(inputs[qa_set]);
             foreach (string chance in outputs[qa_set])
               if (output == chance) {
-                inners.Add((Inner)inner.Clone());
+                lock (inners_lock) {
+                  if (inners.Count >= size)
+                    return;
+                  inners.Add((Inner)inner.Clone());
+                }
                 break;
               }
           } catch (Exception) { }
@@ -231,31 +239,34 @@ namespace Benji.Learner {
               output = inner.Run(inputs[qa_set]);
             } catch (Exception) {
               if (++tries >= maxTries) {
-                inners.Add((Inner)inner.Clone());
+                lock (inners_lock)
+                  if (inners.Count < size)
+                    inners.Add((Inner)inner.Clone());
                 return;
               }
               continue;
             }
             foreach (string chance in outputs[qa_set])
               if (output == chance) {
-                inners.Add((Inner)inner.Clone());
+                lock (inners_lock) {
+                  if (inners.Count >= size)
+                    return;
+                  inners.Add((Inner)inner.Clone());
+                }
                 break;
               }
             if (++tries >= maxTries) {
-              inners.Add((Inner)inner.Clone());
+              lock (inners_lock)
+                if (inners.Count < size)
+                  inners.Add((Inner)inner.Clone());
               return;
             }
           }
         }));
-      Inner dummy;
-      while (inners.TryTake(out dummy))
-        ;
       for (int i = 0; i < size; i++)
         threads[i].Start(i);
       for (int i = 0; i < size; i++)
         threads[i].Join();
-      while (inners.Count > size)
-        inners.TryTake(out dummy);
     }
     /// <summary>
     /// Defines a behavior for when <see cref="Benji.Learner.Population.Use"/> encounters an error during processing.
@@ -314,7 +325,7 @@ namespace Benji.Learner {
     /// </summary>
     public object Clone() {
       Population ret = new Population(0, new Function[0]);
-      ret.inners = new ConcurrentBag<Inner>();
+      ret.inners = new List<Inner>(size);
       foreach (Inner inner in inners)
         ret.inners.Add((Inner)inner.Clone());
       return ret;
@@ -368,8 +379,7 @@ namespace Benji.Learner {
       ushort version;
       if ((version = br.ReadUInt16()) != 0)
         throw new NotSupportedException(string.Format("Learner 5.1 cannot load files with a version above 0x0000.  This file's version is 0x{0:X2}.", version));
-      size = br.ReadInt32();
-      inners = new ConcurrentBag<Inner>();
+      inners = new List<Inner>(size = br.ReadInt32());
       for (int i = 0; i < size; i++)
         inners.Add(new Inner(br, functions));
     }

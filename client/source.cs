@@ -129,7 +129,7 @@ namespace Benji.Learner.Client {
         int i;
         if (!int.TryParse(C(s), out i))
           i = s.Length;
-        return input.Remove(i) + (char)random.Next(0x10000) + input.Substring(i + 1);
+        return input.Remove(i) + (char)random.Next(random.Next(2) == 1 ? 0x10000 : 0x80) + input.Substring(i + 1);
       },
       (s, input) => {
         int i;
@@ -141,7 +141,7 @@ namespace Benji.Learner.Client {
         int i;
         if (!int.TryParse(C(s), out i))
           i = s.Length;
-        return input.Remove(i) + (char)random.Next(0x10000) + input.Substring(i);
+        return input.Remove(i) + (char)random.Next(random.Next(2) == 1 ? 0x10000 : 0x80) + input.Substring(i);
       },
       (s, input) => {
         int i;
