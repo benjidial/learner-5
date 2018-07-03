@@ -192,7 +192,7 @@ namespace Benji.Learner {
     /// <summary>
     /// A lock for accessing <see cref="Benji.Learner.Population.inners"/> from the multi-threaded part of <see cref="Benji.Learner.Population.TrainGeneration(string[], string[][], Function[], int)"/>
     /// </summary>
-    protected object inners_lock;
+    protected object inners_lock = new object();
     /// <summary>
     /// The networks.
     /// </summary>
