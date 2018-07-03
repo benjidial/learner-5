@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using Rollbar;
 namespace Benji.Learner.Client {
   class Program {
     static Random random = new Random();
@@ -157,114 +158,123 @@ namespace Benji.Learner.Client {
                              "     \"done\"       or \"d\" to use these sets\n" +
                              "  or \"clear\"      or \"c\" to clear the screen.";
     public static void Main() {
-      int size;
-      do
-        Console.Write("Population size: ");
-      while (!int.TryParse(Console.ReadLine(), out size));
-      Population population = new Population(size, functions);
-      Console.WriteLine(help);
-      int generations = 0;
-      while (true) {
-        Console.Write("> ");
-        string input = Console.ReadLine();
-        if (input == "train" || input == "t") {
-          string[] inputs;
-          string[][] outputs;
-          MakeSets(out inputs, out outputs);
-          int times;
-          do
-            Console.Write("Number of generations: ");
-          while (!int.TryParse(Console.ReadLine(), out times));
-          int tries;
-          do
-            Console.Write("Number of tries per network per generation: ");
-          while (!int.TryParse(Console.ReadLine(), out tries));
-          for (int i = 0; i < times;) {
-            Console.Write("{0} / {1}...", ++i, times);
-            population.TrainGeneration(inputs, outputs, functions, tries);
+      RollbarLocator.RollbarInstance.Configure(new RollbarConfig("0e3ba4225050448d83cea635cd962563"));
+      try {
+        int size;
+        do
+          Console.Write("Population size: ");
+        while (!int.TryParse(Console.ReadLine(), out size));
+        Population population = new Population(size, functions);
+        Console.WriteLine(help);
+        int generations = 0;
+        while (true) {
+          Console.Write("> ");
+          string input = Console.ReadLine();
+          if (input == "train" || input == "t") {
+            string[] inputs;
+            string[][] outputs;
+            MakeSets(out inputs, out outputs);
+            int times;
+            do
+              Console.Write("Number of generations: ");
+            while (!int.TryParse(Console.ReadLine(), out times));
+            int tries;
+            do
+              Console.Write("Number of tries per network per generation: ");
+            while (!int.TryParse(Console.ReadLine(), out tries));
+            for (int i = 0; i < times;) {
+              Console.Write("{0} / {1}...", ++i, times);
+              population.TrainGeneration(inputs, outputs, functions, tries);
+              Console.WriteLine();
+            }
+            generations += times;
+          } else if (input == "make trainer" || input == "m") {
+            string[] inputs;
+            string[][] outputs;
+            MakeSets(out inputs, out outputs);
+            Console.Write("Training info file: ");
+            string filename = Console.ReadLine();
+            Console.Write("Saving...");
+            using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create)))
+              MakeTrainingFile(bw, inputs, outputs);
+            Console.WriteLine();
+          } else if (input == "load trainer" || input == "l") {
+            Console.Write("Training info file: ");
+            string filename = Console.ReadLine();
+            string[] inputs;
+            string[][] outputs;
+            Console.Write("Loading...");
+            using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open)))
+              LoadTrainingFile(br, out inputs, out outputs);
+            Console.WriteLine();
+            int times;
+            do
+              Console.Write("Number of generations: ");
+            while (!int.TryParse(Console.ReadLine(), out times));
+            int tries;
+            do
+              Console.Write("Number of tries per network per generation: ");
+            while (!int.TryParse(Console.ReadLine(), out tries));
+            for (int i = 0; i < times;) {
+              Console.Write("{0} / {0}...", ++i, times);
+              population.TrainGeneration(inputs, outputs, functions, tries);
+              Console.WriteLine();
+            }
+            generations += times;
+          } else if (input == "use" || input == "u") {
+            Console.Write("Text to process: ");
+            string text = Console.ReadLine();
+            foreach (string output in population.Use(text, Population.ErrorBehavior.use_message_as_output))
+              Console.WriteLine(output);
+          } else if (input == "help" || input == "h")
+            Console.WriteLine(help);
+          else if (input == "exit" || input == "e")
+            return;
+          else if (input == "clear" || input == "c")
+            Console.Clear();
+          else if (input == "memory usage" || input == "s")
+            Console.WriteLine("{0:N0}B", GC.GetTotalMemory(false));
+          else if (input == "generation" || input == "g")
+            if (generations < 0)
+              Console.WriteLine(generations - int.MinValue + " since load");
+            else
+              Console.WriteLine(generations);
+          else if (input == "restart" || input == "R") {
+            generations = 0;
+            do
+              Console.Write("Population size: ");
+            while (!int.TryParse(Console.ReadLine(), out size));
+            population = new Population(size, functions);
+          } else if (input == "load nets" || input == "L") {
+            Console.Write("Networks file: ");
+            string filename = Console.ReadLine();
+            Console.Write("Loading...");
+            using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open))) {
+              ushort version;
+              if ((version = br.ReadUInt16()) != 0x8000) {
+                Console.WriteLine("Learner 5 Client 1.2 cannot load files with a version other than 0x8000.  This file's version was 0x{0:X2}.", version);
+                continue;
+              }
+              generations = br.ReadInt32();
+              population = new Population(br, functions);
+            }
+            Console.WriteLine();
+          } else if (input == "save nets" || input == "S") {
+            Console.Write("Networks file: ");
+            string filename = Console.ReadLine();
+            Console.Write("Saving...");
+            using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create))) {
+              bw.Write((ushort)0x8000);
+              bw.Write(generations);
+              population.Save(bw, functions);
+            }
             Console.WriteLine();
           }
-          generations += times;
-        } else if (input == "make trainer" || input == "m") {
-          string[] inputs;
-          string[][] outputs;
-          MakeSets(out inputs, out outputs);
-          Console.Write("Training info file: ");
-          string filename = Console.ReadLine();
-          Console.Write("Saving...");
-          using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create)))
-            MakeTrainingFile(bw, inputs, outputs);
-          Console.WriteLine();
-        } else if (input == "load trainer" || input == "l") {
-          Console.Write("Training info file: ");
-          string filename = Console.ReadLine();
-          string[] inputs;
-          string[][] outputs;
-          Console.Write("Loading...");
-          using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open)))
-            LoadTrainingFile(br, out inputs, out outputs);
-          Console.WriteLine();
-          int times;
-          do
-            Console.Write("Number of generations: ");
-          while (!int.TryParse(Console.ReadLine(), out times));
-          int tries;
-          do
-            Console.Write("Number of tries per network per generation: ");
-          while (!int.TryParse(Console.ReadLine(), out tries));
-          for (int i = 0; i < times;) {
-            Console.Write("{0} / {0}...", ++i, times);
-            population.TrainGeneration(inputs, outputs, functions, tries);
-            Console.WriteLine();
-          }
-          generations += times;
-        } else if (input == "use" || input == "u") {
-          Console.Write("Text to process: ");
-          string text = Console.ReadLine();
-          foreach (string output in population.Use(text, Population.ErrorBehavior.use_message_as_output))
-            Console.WriteLine(output);
-        } else if (input == "help" || input == "h")
-          Console.WriteLine(help);
-        else if (input == "exit" || input == "e")
-          return;
-        else if (input == "clear" || input == "c")
-          Console.Clear();
-        else if (input == "memory usage" || input == "s")
-          Console.WriteLine("{0:N0}B", GC.GetTotalMemory(false));
-        else if (input == "generation" || input == "g")
-          if (generations < 0)
-            Console.WriteLine(generations - int.MinValue + " since load");
-          else
-            Console.WriteLine(generations);
-        else if (input == "restart" || input == "R") {
-          generations = 0;
-          do
-            Console.Write("Population size: ");
-          while (!int.TryParse(Console.ReadLine(), out size));
-          population = new Population(size, functions);
-        } else if (input == "load nets" || input == "L") {
-          Console.Write("Networks file: ");
-          string filename = Console.ReadLine();
-          Console.Write("Loading...");
-          using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open))) {
-            ushort version;
-            if ((version = br.ReadUInt16()) != 0x8000)
-              throw new NotSupportedException(string.Format("Learner 5 Client 1.2 cannot load files with a version other than 0x8000.  This file's version was 0x{0:X2}.", version));
-            generations = br.ReadInt32();
-            population = new Population(br, functions);
-          }
-          Console.WriteLine();
-        } else if (input == "save nets" || input == "S") {
-          Console.Write("Networks file: ");
-          string filename = Console.ReadLine();
-          Console.Write("Saving...");
-          using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create))) {
-            bw.Write((ushort)0x8000);
-            bw.Write(generations);
-            population.Save(bw, functions);
-          }
-          Console.WriteLine();
         }
+      } catch (Exception ex) {
+        Console.Write("An error occured: \"{0}\"\nSending error report...", ex.Message);
+        RollbarLocator.RollbarInstance.AsBlockingLogger(TimeSpan.FromSeconds(5)).Error(ex);
+        Console.WriteLine();
       }
     }
   }
