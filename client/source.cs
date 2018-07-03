@@ -218,7 +218,13 @@ SOFTWARE.";
             Console.Write("Training info file: ");
             string filename = Console.ReadLine();
             Console.Write("Saving...");
-            using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create)))
+            BinaryWriter bw;
+            try {
+              bw = new BinaryWriter(File.Open(filename, FileMode.Create));
+            } catch (Exception ex) {
+              Console.WriteLine("Failed to open '{0}': {1}", filename, ex.Message);
+              continue;
+            } using (bw)
               MakeTrainingFile(bw, inputs, outputs);
             Console.WriteLine();
           } else if (input == "load trainer" || input == "l") {
@@ -227,7 +233,13 @@ SOFTWARE.";
             string[] inputs;
             string[][] outputs;
             Console.Write("Loading...");
-            using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open)))
+            BinaryReader br;
+            try {
+              br = new BinaryReader(File.Open(filename, FileMode.Open));
+            } catch (Exception ex) {
+              Console.WriteLine("Failed to open '{0}': {1}", filename, ex.Message);
+              continue;
+            } using (br)
               LoadTrainingFile(br, out inputs, out outputs);
             Console.WriteLine();
             int times;
@@ -272,7 +284,13 @@ SOFTWARE.";
             Console.Write("Networks file: ");
             string filename = Console.ReadLine();
             Console.Write("Loading...");
-            using (BinaryReader br = new BinaryReader(File.Open(filename, FileMode.Open))) {
+            BinaryReader br;
+            try {
+              br = new BinaryReader(File.Open(filename, FileMode.Open));
+            } catch (Exception ex) {
+              Console.WriteLine("Failed to open '{0}': {1}", filename, ex.Message);
+              continue;
+            } using (br) {
               ushort version;
               if ((version = br.ReadUInt16()) != 0x8000) {
                 Console.WriteLine("Learner 5 Client 1.2 cannot load files with a version other than 0x8000.  This file's version was 0x{0:X2}.", version);
@@ -286,7 +304,13 @@ SOFTWARE.";
             Console.Write("Networks file: ");
             string filename = Console.ReadLine();
             Console.Write("Saving...");
-            using (BinaryWriter bw = new BinaryWriter(File.Open(filename, FileMode.Create))) {
+            BinaryWriter bw;
+            try {
+              bw = new BinaryWriter(File.Open(filename, FileMode.Create));
+            } catch (Exception ex) {
+              Console.WriteLine("Failed to open '{0}': {1}", filename, ex.Message);
+              continue;
+            } using (bw) {
               bw.Write((ushort)0x8000);
               bw.Write(generations);
               population.Save(bw, functions);
