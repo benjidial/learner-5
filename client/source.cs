@@ -266,13 +266,9 @@ SOFTWARE.";
             do
               Console.Write("Number of generations: ");
             while (!int.TryParse(Console.ReadLine(), out times));
-            int tries;
-            do
-              Console.Write("Number of tries per network per generation: ");
-            while (!int.TryParse(Console.ReadLine(), out tries));
             for (int i = 0; i < times;) {
               Console.Write("{0} / {1}...", ++i, times);
-              population.TrainGeneration(inputs, outputs, functions, tries);
+              population.TrainGeneration(inputs, outputs, functions);
               Console.WriteLine();
             }
             generations += times;
@@ -311,13 +307,9 @@ SOFTWARE.";
             do
               Console.Write("Number of generations: ");
             while (!int.TryParse(Console.ReadLine(), out times));
-            int tries;
-            do
-              Console.Write("Number of tries per network per generation: ");
-            while (!int.TryParse(Console.ReadLine(), out tries));
             for (int i = 0; i < times;) {
               Console.Write("{0} / {0}...", ++i, times);
-              population.TrainGeneration(inputs, outputs, functions, tries);
+              population.TrainGeneration(inputs, outputs, functions);
               Console.WriteLine();
             }
             generations += times;

@@ -79,13 +79,14 @@ namespace Benji.Learner {
           arguments[i] = feeds[i].Run(input);
         return function(arguments, input);
       }
-      private const double done = 0.2, restart = 0.000005, expand = 0.05;
+      private const double done = 0.2, restart = 0.0005, expand = 0.01;
       /// <summary>
       /// Mutate the network below this point using the specified functions when a new function is needed.
       /// </summary>
       /// <param name="functions">A list of functions to pick new functions from.</param>
       public void Mutate(Function[] functions) {
         do {
+        start:
           if (prng.Next(tree_size) > 1 && feeds.Count != 0) {
             feeds[prng.Next(feeds.Count)].Mutate(functions);
             tree_size = 1;
@@ -95,6 +96,7 @@ namespace Benji.Learner {
             function = (strings, input) => input;
             feeds.Clear();
             tree_size = 1;
+            goto start;
           } else if (prng.NextDouble() < expand) {
             feeds.Add(MakeBottom());
             tree_size++;
@@ -133,8 +135,7 @@ namespace Benji.Learner {
           return false;
         cont:
           continue;
-        }
-        return true;
+        } return true;
       }
       /// <summary>
       /// Saves a representation of this <see cref="Benji.Learner.Population.Inner"/> that can later be loaded.
@@ -202,13 +203,12 @@ namespace Benji.Learner {
     /// </summary>
     protected int size;
     /// <summary>
-    /// Trains the generation.
+    /// Trains another generation.
     /// </summary>
     /// <param name="inputs">A list of inputs.</param>
     /// <param name="outputs">A list of allowable outputs for each input.</param>
     /// <param name="functions">When a new function is needed at a step in the network, it is picked from this list.</param>
-    /// <param name="maxTries">If working networks can't be made in this many tries, add a non-working one in their place.</param> 
-    public void TrainGeneration(string[] inputs, string[][] outputs, Function[] functions, int maxTries) {
+    public void TrainGeneration(string[] inputs, string[][] outputs, Function[] functions) {
       if (inputs.Length != outputs.Length)
         throw new ArgumentException("'inputs' and 'outputs' must be the same length.");
       Thread[] threads = new Thread[inners.Count];
@@ -217,51 +217,30 @@ namespace Benji.Learner {
       for (int i = 0; i < size; i++)
         threads[i] = new Thread((ParameterizedThreadStart)((index) => {
           Inner inner = tmp[(int)index];
-          int qa_set = prng.Next(inputs.Length);
-          string output;
-          try {
-            output = inner.Run(inputs[qa_set]);
-            foreach (string chance in outputs[qa_set])
-              if (output == chance) {
-                lock (inners_lock) {
-                  if (inners.Count >= size)
-                    return;
-                  inners.Add((Inner)inner.Clone());
-                }
-                break;
-              }
-          } catch (Exception) { }
-          int tries = 0;
-          while (inners.Count < size) {
-            inner.Mutate(functions);
-            qa_set = prng.Next(inputs.Length);
+          for (int j = 0; j < inners.Count; j++) {
+            string output;
             try {
-              output = inner.Run(inputs[qa_set]);
+              output = inner.Run(inputs[j]);
             } catch (Exception) {
-              if (++tries >= maxTries) {
-                lock (inners_lock)
-                  if (inners.Count < size)
-                    inners.Add((Inner)inner.Clone());
-                return;
-              }
-              continue;
-            }
-            foreach (string chance in outputs[qa_set])
-              if (output == chance) {
-                lock (inners_lock) {
-                  if (inners.Count >= size)
-                    return;
-                  inners.Add((Inner)inner.Clone());
-                }
-                break;
-              }
-            if (++tries >= maxTries) {
-              lock (inners_lock)
-                if (inners.Count < size)
-                  inners.Add((Inner)inner.Clone());
-              return;
-            }
+              goto bad;
+            } foreach (string choice in outputs[j])
+              if (output == choice)
+                goto good;
+            goto bad;
+          good:
+            ;
+          } lock (inners_lock) {
+            if (inners.Count < size)
+              inners.Add(inner);
+            return;
           }
+        bad:
+          ;
+          Inner other = (Inner)inner.Clone();
+          other.Mutate(functions);
+          lock (inners_lock)
+            if (inners.Count < size)
+              inners.Add(other);
         }));
       for (int i = 0; i < size; i++)
         threads[i].Start(i);
@@ -314,10 +293,8 @@ namespace Benji.Learner {
             ret = ex.Message;
             break;
           }
-        }
-        yield return ret;
-      }
-      if (errors.Count != 0)
+        } yield return ret;
+      } if (errors.Count != 0)
         throw new AggregateException(errors);
     }
     /// <summary>
@@ -351,8 +328,7 @@ namespace Benji.Learner {
         return false;
       cont:
         continue;
-      }
-      return true;
+      } return true;
     }
     /// <summary>
     /// Saves a representation of this <see cref="Benji.Learner.Population"/> that can later be loaded.
