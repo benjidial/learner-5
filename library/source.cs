@@ -85,24 +85,23 @@ namespace Benji.Learner {
       /// </summary>
       /// <param name="functions">A list of functions to pick new functions from.</param>
       public void Mutate(Function[] functions) {
-        do {
-        start:
-          if (prng.Next(tree_size) > 1 && feeds.Count != 0) {
-            feeds[prng.Next(feeds.Count)].Mutate(functions);
-            tree_size = 1;
-            foreach (Inner feed in feeds)
-              tree_size += feed.tree_size;
-          } else if (prng.NextDouble() < restart) {
-            function = (strings, input) => input;
-            feeds.Clear();
-            tree_size = 1;
-            goto start;
-          } else if (prng.NextDouble() < expand) {
-            feeds.Add(MakeBottom());
-            tree_size++;
-          } else
-            function = functions[prng.Next(functions.Length)];
-        } while (prng.NextDouble() > done);
+      start:
+        do if (prng.Next(tree_size) > 1 && feeds.Count != 0) {
+          feeds[prng.Next(feeds.Count)].Mutate(functions);
+          tree_size = 1;
+          foreach (Inner feed in feeds)
+            tree_size += feed.tree_size;
+        } else if (prng.NextDouble() < restart) {
+          function = (strings, input) => input;
+          feeds.Clear();
+          tree_size = 1;
+          goto start;
+        } else if (prng.NextDouble() < expand) {
+          feeds.Add(MakeBottom());
+          tree_size++;
+        } else
+          function = functions[prng.Next(functions.Length)];
+        while (prng.NextDouble() > done);
       }
       /// <summary>
       /// Clone this instance.

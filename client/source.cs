@@ -206,6 +206,7 @@ namespace Benji.Learner.Client {
       }
     }
     const string help = "Learner 5 client is under the MIT License.\n" +
+                        "Source is available at <https://github.com/benjidial/learner-5>\n" +
                         "Type \"license\"      or \"M\" for the full license,\n" +
                         "     \"train\"        or \"t\" to train the networks,\n" +
                         "     \"make trainer\" or \"m\" to make a training info file,\n" +
