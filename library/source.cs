@@ -85,27 +85,30 @@ namespace Benji.Learner {
       /// </summary>
       /// <param name="functions">A list of functions to pick new functions from.</param>
       public void Mutate(Function[] functions) {
+        Stack<Inner> stack = new Stack<Inner>();
+        Inner current = this;
       start:
-        do if (prng.Next(tree_size) > 1 && feeds.Count != 0) {
-          feeds[prng.Next(feeds.Count)].Mutate(functions);
-          tree_size = 1;
-          foreach (Inner feed in feeds)
-            tree_size += feed.tree_size;
+        do if (prng.Next(current.tree_size) > 1 && current.feeds.Count != 0) {
+          stack.Push(current);
+          current = current.feeds[prng.Next(current.feeds.Count)];
         } else if (prng.NextDouble() < restart) {
-          function = (strings, input) => input;
-          feeds.Clear();
-          tree_size = 1;
+          current.function = (strings, input) => input;
+          current.feeds.Clear();
+          current.tree_size = 1;
           goto start;
         } else if (prng.NextDouble() < expand) {
-          feeds.Add(MakeBottom());
-          tree_size++;
+          current.feeds.Add(MakeBottom());
+          current.tree_size++;
         } else
-          function = functions[prng.Next(functions.Length)];
+          current.function = functions[prng.Next(functions.Length)];
         while (prng.NextDouble() > done);
+        if (stack.Count != 0) {
+          (current = stack.Pop()).tree_size = 1;
+          foreach (Inner feed in current.feeds)
+            current.tree_size += feed.tree_size;
+          goto start;
+        }
       }
-      /// <summary>
-      /// Clone this instance.
-      /// </summary>
       public object Clone() {
         List<Inner> new_feeds = new List<Inner>(feeds.Count);
         foreach (Inner feed in feeds)
